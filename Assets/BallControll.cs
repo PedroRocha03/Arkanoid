@@ -2,58 +2,87 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BallControll : MonoBehaviour
+public class BallControl : MonoBehaviour
 {
-    private Rigidbody2D rb2d;               // Define o corpo rigido 2D que representa a bola
-
-
-    // inicializa a bola randomicamente para esquerda ou direita
-    void GoBall()
-    {
-        float rand = Random.Range(0, 2);
-        if (rand < 1)
-        {
-            rb2d.AddForce(new Vector2(20, -15));
-        }
-    }
+    private Rigidbody2D rb2d;
+    private bool ballLaunched = false;  
+    public int points = 100; 
+    public AudioSource source;
 
     void Start()
     {
-        rb2d = GetComponent<Rigidbody2D>(); // Inicializa o objeto bola
-        Invoke("GoBall", 2);    // Chama a função GoBall após 2 segundos
+        rb2d = GetComponent<Rigidbody2D>(); 
+        source = GetComponent<AudioSource>();
     }
 
-    // Determina o comportamento da bola nas colisões com os Players (raquetes)
+    void Update()
+    {
+        if (!ballLaunched && Input.GetKeyDown(KeyCode.Space)) 
+        {
+            GoBall();
+            ballLaunched = true;
+        }
+
+        if (Input.GetKeyDown(KeyCode.R)) 
+        {
+            ResetBall();
+        }
+    }
+
+    void GoBall()
+    {
+        float rand = Random.Range(0, 2);
+        Vector2 force = (rand < 1) ? new Vector2(3, 5) : new Vector2(-3, 5);
+        rb2d.velocity = force;  
+    }
+
     void OnCollisionEnter2D(Collision2D coll)
     {
         if (coll.collider.CompareTag("Player"))
         {
-            Vector2 vel;
-            vel.x = rb2d.velocity.x;
-            vel.y = (rb2d.velocity.y / 2) + (coll.collider.attachedRigidbody.velocity.y / 3);
+            Vector2 vel = rb2d.velocity;
+
+            
+            vel *= 1.04f; 
+
+            
+            if (Mathf.Abs(vel.y) < 1.3f)
+                vel.y = vel.y > 0 ? 1.3f : -1.3f;
+
+            
+            if (Mathf.Abs(vel.x) > Mathf.Abs(vel.y) * 1.5f)
+                vel.x = vel.x > 0 ? vel.y * 1.2f : -vel.y * 1.2f;
+
+            
+            vel.y += Random.Range(-0.5f, 0.5f);
+
             rb2d.velocity = vel;
         }
 
-        if (coll.gameObject.tag == "Brick")
+        if (coll.gameObject.CompareTag("Brick"))
         {
             Destroy(coll.gameObject);
-        }
+            GameManager.PlayerScore1 += points; 
+            GameManager.instance.AddScore(points); 
+            source.Play();
 
+        }
+        source.Play();
     }
 
-    // Reinicializa a posição e velocidade da bola
     void ResetBall()
     {
         rb2d.velocity = Vector2.zero;
-        transform.position = Vector2.zero;
+        transform.position = new Vector2(0, -1);
+        ballLaunched = false; 
     }
 
-    // Reinicializa o jogo
     void RestartGame()
     {
         ResetBall();
-        Invoke("GoBall", 1);
+        if (Input.GetKeyDown(KeyCode.Space)) 
+        {
+            GoBall();
+        }
     }
-
-
 }
